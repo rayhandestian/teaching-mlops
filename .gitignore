@@ -1,0 +1,9 @@
+etc/
+Include/
+Lib/
+mlartifacts/
+mlruns/
+model/
+Scripts/
+share/
+pyvenv.cfg
