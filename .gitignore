@@ -7,3 +7,6 @@ model/
 Scripts/
 share/
 pyvenv.cfg
+distribution*
+data/*.csv
+drift_detector.py

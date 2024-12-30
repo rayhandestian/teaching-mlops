@@ -109,6 +109,33 @@ python train_my_dataset.py
    - Model parameters and metrics for each model
    - Any interesting findings or patterns you discovered
 
+### Task 4: Drift Detection with MLFlow Integration
+
+1. Understand PSI Calculation
+- Study the PSI formula and interpretation:
+  * PSI = Σ (Actual% - Expected%) × ln(Actual% / Expected%)
+  * Thresholds: <0.1 (no drift), 0.1-0.2 (moderate), >0.2 (high drift)
+
+2. Implement Drift Detection
+
+3. Run Drift Detection:
+
+```bash
+python detect_drift.py
+```
+
+4. Required Screenshots:
+- MLflow experiment page showing drift detection runs
+- PSI values for each feature
+- Distribution comparisons in artifacts
+- Overall drift analysis results
+
+5. Experiment with Different Drift Levels:
+Modify data_generator.py drift parameters to create:
+- No drift (PSI < 0.1)
+- Moderate drift (0.1 ≤ PSI < 0.2)
+- High drift (PSI ≥ 0.2)
+
 ## Submission Requirements
 
 Create a report (README.md) in your repository containing:
@@ -132,13 +159,19 @@ Create a report (README.md) in your repository containing:
    - Analysis of model performance
    - Comparison with synthetic data results
 
-5. **Reflection** (half A4 page report)
+5. **Task 4: Drift Detection**
+   - Code implementation in your repository
+   - Screenshots of MLflow tracking for drift detection
+   - Analysis of drift detection results
+   - Document different drift parameter setting based on the data generator
+
+7. **Reflection** (half A4 page report)
    - What you learned about MLflow
    - Challenges faced and how you overcame them
    - Suggestions for improvement
 
-6. **Your Github repo**
-   - Denote your full name and student ID clearly with the updated codes and created model, mlflow logging, and data directories
+8. **Your Github repo**
+   - Denote your full name and student ID number clearly with the updated codes and created model, mlflow logging, and data directories
 
 ## Troubleshooting
 
@@ -171,6 +204,5 @@ Common issues and solutions:
 After completing this practicum, you can:
 1. Experiment with different ML models
 2. Try more complex datasets
-3. Implement model drift detection
-4. Explore MLflow's model registry
-5. Add automated testing
+3. Explore MLflow's model registry
+4. Add automated testing
