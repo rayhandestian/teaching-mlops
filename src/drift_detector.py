@@ -2,103 +2,134 @@ import pandas as pd
 import numpy as np
 import mlflow
 
-def calculate_psi(expected:pd.Series, actual:pd.Series, buckets=10):
-    """Calculate Population Stability Index"""
+def create_bins(data, n_bins=10):
+    """Create bins using percentile method"""
+    print(n_bins)
+    bins = np.percentile(data, np.linspace(0, 100, n_bins + 1))
+    return bins
 
-    #using fixed interval
+def get_distributions(expected, actual, bins):
+    """Calculate % distribution for each dataset"""
+    expected_dist = np.histogram(expected, bins)[0] / len(expected)
+    actual_dist = np.histogram(actual, bins)[0] / len(actual)
     
-    def get_bucket_values(data:pd.Series, bucket_edges):
+    # Add small epsilon to avoid division by zero
+    expected_dist = np.clip(expected_dist, 1e-8, None)
+    actual_dist = np.clip(actual_dist, 1e-8, None)
+    
+    return expected_dist, actual_dist
 
-        bucket_values = pd.cut(data, bucket_edges, labels=False, include_lowest=True)
-        
-        counts = pd.value_counts(bucket_values).sort_index()
-        print(counts)
-        counts_dist = counts/np.sum(counts)
-        print(counts_dist)
-        
-        return counts_dist
-    
-    # Calculate bucket edges using expected 
-    edges = np.percentile(expected, np.linspace(0, 100, buckets+1))
-    print(edges)
-    edges = np.unique(edges) # to ensure that the bin division does not overlap each other
-    print(edges)
-    
-    # Get distributions
-    expected_dist = get_bucket_values(expected, edges)
-    actual_dist = get_bucket_values(actual, edges)
-    
-    # Calculate PSI
-    psi = np.sum(
-        (actual_dist - expected_dist) * 
-        np.log(actual_dist / expected_dist)
-    )
-    
+def calculate_psi(expected_dist, actual_dist):
+    """Calculate PSI value"""
     print(actual_dist)
     print(expected_dist)
     print(actual_dist - expected_dist)
     print(np.log(actual_dist / expected_dist))
+
+    psi = np.sum(
+        (actual_dist - expected_dist) * 
+        np.log(actual_dist / expected_dist)
+    )
     return psi
 
-def detect_drift(reference_data_path, new_data_path, run_id):
-    """Detect drift using PSI"""
-    # Load data
-    reference_data = pd.read_csv(reference_data_path)
-    new_data = pd.read_csv(new_data_path)
+# def detect_drift_psi(expected_dataset, actual_dataset, n_bins=10):
+#     """Complete PSI calculation  for each feature"""
+#     drift_metrics = {}
+#     for column in expected_dataset.columns:
+#         if column != 'churn':
+#             expected_data = expected_dataset[column]
+#             actual_data = actual_dataset[column]
+
+#             bins = create_bins(expected_data, n_bins)
+            
+#             # Get distributions
+#             expected_dist, actual_dist = get_distributions(
+#                 expected_data, actual_data, bins
+#             )
+            
+#             # Calculate PSI
+#             psi_value = calculate_psi(expected_dist, actual_dist)
+
+#             drift_metrics[f"{column}_psi"] = psi_value
+            
+#     # Determine if drift is significant (PSI > 0.2 is considered significant)
+#     drift_check = any(v > 0.1 and v <= 0.2 for v in drift_metrics.values())
+#     mlflow.log_param("drift_needs_check", drift_check)
     
-    # Calculate PSI for each feature
-    drift_metrics = {}
-    for column in reference_data.columns:
-        if column != 'churn':
-            print("COL NAME: " +column)
-            psi = calculate_psi(
-                reference_data[column],
-                new_data[column]
+#     drift_detected = any(v > 0.2 for v in drift_metrics.values())
+#     mlflow.log_param("drift_detected", drift_detected)
+    
+#     return drift_metrics, drift_detected
+
+
+def calculate_psi_column(expected_data, actual_data, column_name, n_bins=10):
+    """Complete PSI calculation  for each feature"""
+
+    bins = create_bins(expected_data, n_bins)
+    
+    # Get distributions
+    expected_dist, actual_dist = get_distributions(
+        expected_data, actual_data, bins
+    )
+    
+    # Calculate PSI
+    psi_value = calculate_psi(expected_dist, actual_dist)
+    
+    return psi_value, bins, expected_dist, actual_dist
+
+def train_and_monitor_drift():
+    # Start MLflow run
+    with mlflow.start_run(run_name="model_with_drift_detection") as run:
+              # Load data
+        train_data = pd.read_csv('data/train.csv')
+        new_data = pd.read_csv('data/new_data.csv')
+        
+        # Calculate and log PSI for each feature
+        drift_metrics = {}
+        drift_detected = False
+        
+        for column in train_data.columns:
+            psi_value, bins, expected_dist, actual_dist = calculate_psi_column(
+                train_data[column], 
+                new_data[column],
+                column
             )
-            drift_metrics[f"{column}_psi"] = psi
-    
-    # Log drift metrics to MLflow
-    with mlflow.start_run(run_name="drift_detection"):
+            
+            # Log PSI value
+            drift_metrics[f"psi_{column}"] = psi_value
+            
+            # Check if drift detected
+            if psi_value >= 0.1:
+                drift_detected = True
+                
+            # Log distribution data as artifacts
+            dist_df = pd.DataFrame({
+                'bins': bins[:-1],
+                'expected_dist': expected_dist,
+                'actual_dist': actual_dist
+            })
+            dist_df.to_csv(f'distribution_{column}.csv', index=False)
+            mlflow.log_artifact(f'distribution_{column}.csv')
+        
+        # Log overall drift metrics
         mlflow.log_metrics(drift_metrics)
         
-        # Determine if drift is significant (PSI > 0.2 is considered significant)
-        drift_detected = any(v > 0.2 for v in drift_metrics.values())
+        # Log drift status as parameter
         mlflow.log_param("drift_detected", drift_detected)
         
-        return drift_metrics, drift_detected
-    
-    
-def detect_drift_psi(reference_data_path, new_data_path, run_id):
-    """Detect drift using PSI"""
-    # Load data
-    reference_data = pd.read_csv(reference_data_path)
-    new_data = pd.read_csv(new_data_path)
-    
-    # Calculate PSI for each feature
-    drift_metrics = {}
-    for column in reference_data.columns:
-        if column != 'churn':
-            psi = calculate_psi(
-                reference_data[column],
-                new_data[column]
-            )
-            drift_metrics[f"{column}_psi"] = psi
-    
-    # Log drift metrics to MLflow
-    with mlflow.start_run(run_name="drift_detection"):
-        mlflow.log_metrics(drift_metrics)
-        
-        # Determine if drift is significant (PSI > 0.2 is considered significant)
-        drift_detected = any(v > 0.2 for v in drift_metrics.values())
-        mlflow.log_param("drift_detected", drift_detected)
-        
-        return drift_metrics, drift_detected
+        return run.info.run_id, drift_metrics, drift_detected
+
 
 if __name__ == "__main__":
-    metrics, has_drift = detect_drift(
-        "data/train.csv",
-        "data/new_data.csv",
-        "latest"
-    )
-    print("Drift Metrics:", metrics)
-    print("Drift Detected:", has_drift)
+    mlflow.set_tracking_uri("http://localhost:5000")
+    mlflow.set_experiment("drift_detection_demo")
+    
+    run_id, drift_metrics, has_drift = train_and_monitor_drift()
+    
+    print("\nDrift Detection Results:")
+    print("-" * 50)
+    print(f"Run ID: {run_id}")
+    print("\nPSI Values:")
+    for metric, value in drift_metrics.items():
+        print(f"{metric}: {value:.4f}")
+    print(f"\nDrift Detected: {has_drift}")

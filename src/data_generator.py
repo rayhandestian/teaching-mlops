@@ -6,9 +6,9 @@ def generate_data(n_samples, drift_params=None):
     # np.random.seed(42)
     
     data = {
-        'usage_mins': np.random.normal(600, 200, n_samples),
-        'monthly_bill': np.random.normal(70, 30, n_samples),
-        'support_calls': np.random.poisson(2, n_samples)
+        'usage_mins': np.random.normal(600, 100, n_samples),
+        'monthly_bill': np.random.normal(70, 20, n_samples),
+        'support_calls': np.random.poisson(3, n_samples)
     }
     
     # Apply drift if specified
@@ -37,9 +37,9 @@ if __name__ == "__main__":
     
     # New data with drift
     drift_params = {
-        'usage_mins': (50, 1.2),    # Increase mean and variance
-        'monthly_bill': (10, 1.1),   # Slight increase
-        'support_calls': (1, 1.5)    # More variance in support calls
+        'usage_mins': (5, 1.5),    # Increase mean and variance
+        'monthly_bill': (2, 1.6),   # Slight increase
+        'support_calls': (0.5, 1.1)    # More variance in support calls
     }
     new_data = generate_data(1000, drift_params)
     new_data.to_csv('data/new_data.csv', index=False)
