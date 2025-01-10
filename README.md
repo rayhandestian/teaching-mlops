@@ -48,7 +48,7 @@ mlflow server --host 127.0.0.1 --port 5000
 
 2. Generate synthetic data:
 ```bash
-python data_generator.py
+python src/data_generator.py
 ```
 This will create:
 - `data/train.csv`: Initial training data
@@ -56,7 +56,7 @@ This will create:
 
 3. Train and log models:
 ```bash
-python train_model.py
+python src/train_model.py
 ```
 This will:
 - Train a Random Forest model
